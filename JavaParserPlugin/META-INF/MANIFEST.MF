@@ -1,0 +1,16 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: JavaParserPlugin
+Bundle-SymbolicName: JavaParserPlugin; singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Activator: javaparserplugin.Activator
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.jdt.core;bundle-version="3.8.3",
+ org.eclipse.core.resources;bundle-version="3.8.1",
+ org.eclipse.ui.console;bundle-version="3.5.100",
+ org.eclipse.jface.text;bundle-version="3.8.2"
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Import-Package: org.eclipse.emf.ecore,
+ org.eclipse.emf.ecore.resource
