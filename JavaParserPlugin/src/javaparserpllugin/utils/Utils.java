@@ -6,6 +6,10 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -18,6 +22,7 @@ import org.eclipse.ui.console.IConsoleManager;
 import org.eclipse.ui.console.IConsoleView;
 import org.eclipse.ui.console.MessageConsole;
 import org.eclipse.ui.console.MessageConsoleStream;
+
 
 
 public class Utils {
@@ -86,6 +91,27 @@ public class Utils {
 			e.printStackTrace();
 		}
 	}
+	
+	
+
+	private static CompilationUnit createCompilationUnit(String sourceFile, IJavaProject javaProject) {
+		String source = null;
+		try {
+			source = readFileToString(sourceFile);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		ASTParser parser = ASTParser.newParser(AST.JLS3); 
+		parser.setKind(ASTParser.K_COMPILATION_UNIT);
+		parser.setSource(source.toCharArray()); // set source
+		parser.setProject(javaProject);
+		parser.setResolveBindings(true); // we need bindings later on
+	    parser.setBindingsRecovery(true);
+		return (CompilationUnit) parser.createAST(null /* IProgressMonitor */);
+	}
+
+
 
 	
 	

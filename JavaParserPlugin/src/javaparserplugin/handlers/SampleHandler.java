@@ -64,133 +64,108 @@ public class SampleHandler extends AbstractHandler {
 	 */
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		IWorkbenchWindow window = HandlerUtil.getActiveWorkbenchWindowChecked(event);
-		
-
 		builder = new StringBuilder();
+		parseProjects();
+		Utils.writeToConsole(CONSOLE_NAME, builder.toString());
+		return null;
+	}
 
+
+	private void parseProjects(){
 		IProject[] allProjects = ResourcesPlugin.getWorkspace().getRoot().getProjects();
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();
 		workspacePath = workspace.getRoot().getLocation().toString();
-
 		for (IProject iProject : allProjects) {
 			if(JavaProject.hasJavaNature(iProject)){
 				IJavaProject jProj = JavaCore.create(iProject);
 				//Utils.writeToConsole(CONSOLE_NAME, workspace.getRoot().getLocation().toString());
-				parseJavaProject(jProj);
+				if(jProj.getElementName().equals("ASmallProject")){
+					builder.append("################################################################################################\n");
+					builder.append("PROJECT: " + jProj.getElementName() + "\n");
+					builder.append("################################################################################################\n");
+					parsePackages(jProj);
+				}
 			}
 		}
 
-		Utils.writeToConsole(CONSOLE_NAME, builder.toString());
 
-		return null;
 	}
 
-	private void parseJavaProject(IJavaProject jProj){
 
+	private void parsePackages(IJavaProject jProj){
 		IPackageFragment[] fragments = null;
-
 		try {
 			fragments = jProj.getPackageFragments();
 			for (IPackageFragment iPackageFragmentRoot : fragments) {
 				//String location = fragments[0].getResource().getLocation().toString();
 				if (iPackageFragmentRoot.getKind() == IPackageFragmentRoot.K_SOURCE) {
 					//Utils.writeToConsole(CONSOLE_NAME, "Package " + mypackage.getElementName());
-					printICompilationUnitInfo(iPackageFragmentRoot, jProj);
+					//builder.append("Package: " + iPackageFragmentRoot.getElementName().toString() + "\n");
+					for (ICompilationUnit unit : iPackageFragmentRoot.getCompilationUnits()) {
+						
+						CompilationUnit cu = createCompilationUnit(workspacePath + unit.getPath().toString(), unit.getElementName(), jProj);
+						parseCompilationUnit(cu);
+
+					}
 				}
 				//Utils.writeToConsole(CONSOLE_NAME, iPackageFragmentRoot.getUnderlyingResource());
 			}
-
 		} catch (JavaModelException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
-
-	}
-
-	private void printICompilationUnitInfo(IPackageFragment mypackage, IJavaProject jProj) throws JavaModelException {
-		for (ICompilationUnit unit : mypackage.getCompilationUnits()) {
-			CompilationUnit cu = createCompilationUnit(workspacePath + unit.getPath().toString(), jProj);
-			parseCompilationUnit(cu);
-
-		}
-	}
-
-	private void printIMethods(ICompilationUnit unit) throws JavaModelException {
-		IType[] allTypes = unit.getAllTypes();
-		for (IType type : allTypes) {
-			printIMethodDetails(type);
-		}
-	}
-
-	private void printCompilationUnitDetails(ICompilationUnit unit) throws JavaModelException {
-		Utils.writeToConsole(CONSOLE_NAME, "Source file " + unit.getElementName());
-		Document doc = new Document(unit.getSource());
-		Utils.writeToConsole(CONSOLE_NAME, "Has number of lines: " + doc.getNumberOfLines());
-		printIMethods(unit);
-	}
-
-	private void printIMethodDetails(IType type) throws JavaModelException {
-		IMethod[] methods = type.getMethods();
-		for (IMethod method : methods) {
-			Utils.writeToConsole(CONSOLE_NAME, "Method name " + method.getElementName());
-			Utils.writeToConsole(CONSOLE_NAME, "Signature " + method.getSignature());
-			Utils.writeToConsole(CONSOLE_NAME, "Return Type " + method.getReturnType());
-			//Utils.writeToConsole(CONSOLE_NAME, "Methond body" + method.get); 
-		}
 	}
 
 	private void parseCompilationUnit(CompilationUnit cu) {
-
-		//		ASTParser parser = ASTParser.newParser(AST.JLS3);
-		//		parser.setSource(str.toCharArray());
-		//		parser.setKind(ASTParser.K_COMPILATION_UNIT);
-		//		parser.setResolveBindings(true);
-		//		//StringBuilder builder = new StringBuilder();
-		//		final CompilationUnit cu = (CompilationUnit) parser.createAST(null);
 		TypeDeclaration cuType = (TypeDeclaration)cu.types().get(0);
 		ArrayList<MethodDeclaration> cuMethodList = new ArrayList<MethodDeclaration>(Arrays.asList(cuType.getMethods()));
-		//@SuppressWarnings("unchecked")
 		List cuImportsList = cu.imports();
 		String cuName = cuType.getName().toString();
-		builder.append("Name:\n" + cuName + "\n");
-		builder.append("Imports:\n");
-		for (Object importDeclaration : cuImportsList) {
-			builder.append(importDeclaration);
-		}
-		builder.append("Methods:\n");
+		builder.append("CLASS NAME:" + cuName + "\n");
+//		builder.append("IMPORTS:\n");
+//		for (Object importDeclaration : cuImportsList) {
+//			builder.append("- " + importDeclaration);
+//		}
+		builder.append("METHODS:\n");
 		for(MethodDeclaration methodDeclaration : cuMethodList){
-			builder.append("- " + methodDeclaration.getName() + "\n");
-			ArrayList<Statement> statementList = new ArrayList<Statement>(methodDeclaration.getBody().statements());
-			//builder.append(methodDeclaration.getBody());
-
-			for (Statement statement : statementList) {				
-				builder.append("statement type: " + statement.getNodeType() + "\n");
-				builder.append("\t" + statement.toString());
-				if(statement.getNodeType() == ASTNode.VARIABLE_DECLARATION_STATEMENT){
-					//IBinding iBinding = ((VariableDeclarationStatement) statement).getType().resolveBinding();
-					
-					builder.append("\tvariable declaration, type: " + (((VariableDeclarationStatement) statement).getType().resolveBinding() == null? "null" : "not null" )+ "\n");
-
-				}
-			}
+			parseMethod(methodDeclaration);
 		}
-		builder.append("\n################################################################################################\n");
 	}
 
-	private static CompilationUnit createCompilationUnit(String sourceFile, IJavaProject javaProject) {
-	    String source = null;
+
+	private void parseMethod(MethodDeclaration methodDeclaration){
+		builder.append("METHOD NAME: " + methodDeclaration.getName() + "\n");
+		ArrayList<Statement> statementList = new ArrayList<Statement>(methodDeclaration.getBody().statements());
+		for (Statement statement : statementList) {				
+			parseStatement(statement);
+		}
+	}
+
+	private void parseStatement(Statement statement){
+		builder.append("STATEMENT TYPE: " + statement.getNodeType() + "\n");
+		builder.append("statement body: " + statement.toString());
+		if(statement.getNodeType() == ASTNode.VARIABLE_DECLARATION_STATEMENT){
+			builder.append("variable declaration, type: " + (((VariableDeclarationStatement) statement).getType().toString()) + "\n");
+			builder.append("Resolved type: " + (((VariableDeclarationStatement) statement).getType().resolveBinding() == null? "null" : ((VariableDeclarationStatement) statement).getType().resolveBinding().toString()) + "\n");
+		}
+	}
+
+	private static CompilationUnit createCompilationUnit(String sourceFile, String elementName, IJavaProject javaProject) {
+		String source = null;
 		try {
 			source = Utils.readFileToString(sourceFile);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	    ASTParser parser = ASTParser.newParser(AST.JLS3); 
-	    parser.setKind(ASTParser.K_COMPILATION_UNIT);
-	    parser.setSource(source.toCharArray()); // set source
-	    parser.setProject(javaProject);
-	    parser.setResolveBindings(true); // we need bindings later on
-	    return (CompilationUnit) parser.createAST(null /* IProgressMonitor */);
+		ASTParser parser = ASTParser.newParser(AST.JLS3); 
+		parser.setKind(ASTParser.K_COMPILATION_UNIT);
+		parser.setSource(source.toCharArray()); // set source
+		parser.setProject(javaProject);
+		parser.setUnitName(elementName);
+		parser.setResolveBindings(true); // we need bindings later on
+		parser.setBindingsRecovery(true);
+		return (CompilationUnit) parser.createAST(null /* IProgressMonitor */);
 	}
 }
